@@ -7,7 +7,8 @@ const {
   Routes,
   SlashCommandBuilder,
   Events,
-  PermissionFlagsBits
+  PermissionFlagsBits,
+  EmbedBuilder
 } = require('discord.js');
 
 const client = new Client({
@@ -88,26 +89,42 @@ const unlockCommand = new SlashCommandBuilder()
   .setDescription('Unlock the current channel (allow @everyone to send messages)')
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels);
 
+// Help
+const helpCommand = new SlashCommandBuilder()
+  .setName('help')
+  .setDescription('Show all available bot commands');
+
 // ===== Register Commands =====
 client.once('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
+
+  // Set bot status
+  client.user.setPresence({
+    activities: [{ name: 'moderating the server 👀', type: 3 }], // Watching
+    status: 'online'
+  });
+
   try {
     const rest = new REST({ version: '10' }).setToken(TOKEN);
-    await rest.put(Routes.applicationCommands(client.user.id), {
-      body: [
-        kickCommand.toJSON(),
-        banCommand.toJSON(),
-        sayCommand.toJSON(),
-        giveRoleCommand.toJSON(),
-        removeRoleCommand.toJSON(),
-        muteCommand.toJSON(),
-        unmuteCommand.toJSON(),
-        moveCommand.toJSON(),
-        lockCommand.toJSON(),
-        unlockCommand.toJSON()
-      ]
-    });
-    console.log('📤 Commands registered');
+    await rest.put(
+      Routes.applicationGuildCommands(client.user.id, "YOUR_GUILD_ID"), // <-- replace with your server ID
+      {
+        body: [
+          kickCommand.toJSON(),
+          banCommand.toJSON(),
+          sayCommand.toJSON(),
+          giveRoleCommand.toJSON(),
+          removeRoleCommand.toJSON(),
+          muteCommand.toJSON(),
+          unmuteCommand.toJSON(),
+          moveCommand.toJSON(),
+          lockCommand.toJSON(),
+          unlockCommand.toJSON(),
+          helpCommand.toJSON()
+        ]
+      }
+    );
+    console.log('📤 Commands registered (guild only)');
   } catch (err) {
     console.error('❌ Command registration failed:', err);
   }
@@ -122,7 +139,7 @@ client.on(Events.InteractionCreate, async interaction => {
     if (commandName === 'kick') {
       const user = interaction.options.getUser('target');
       const member = await interaction.guild.members.fetch(user.id).catch(() => null);
-      if (!member) return interaction.reply({ content: '⚠️ User not found.', flags: 64 });
+      if (!member) return interaction.reply({ content: '⚠️ User not found.' });
       await member.kick();
       return interaction.reply(`✅ Kicked ${user.tag}`);
     }
@@ -130,7 +147,7 @@ client.on(Events.InteractionCreate, async interaction => {
     if (commandName === 'ban') {
       const user = interaction.options.getUser('target');
       const member = await interaction.guild.members.fetch(user.id).catch(() => null);
-      if (!member) return interaction.reply({ content: '⚠️ User not found.', flags: 64 });
+      if (!member) return interaction.reply({ content: '⚠️ User not found.' });
       await member.ban();
       return interaction.reply(`✅ Banned ${user.tag}`);
     }
@@ -144,7 +161,7 @@ client.on(Events.InteractionCreate, async interaction => {
       const user = interaction.options.getUser('target');
       const role = interaction.options.getRole('role');
       const member = await interaction.guild.members.fetch(user.id).catch(() => null);
-      if (!member) return interaction.reply({ content: '⚠️ User not found.', flags: 64 });
+      if (!member) return interaction.reply({ content: '⚠️ User not found.' });
       await member.roles.add(role);
       return interaction.reply(`✅ Added role ${role.name} to ${user.tag}`);
     }
@@ -153,7 +170,7 @@ client.on(Events.InteractionCreate, async interaction => {
       const user = interaction.options.getUser('target');
       const role = interaction.options.getRole('role');
       const member = await interaction.guild.members.fetch(user.id).catch(() => null);
-      if (!member) return interaction.reply({ content: '⚠️ User not found.', flags: 64 });
+      if (!member) return interaction.reply({ content: '⚠️ User not found.' });
       await member.roles.remove(role);
       return interaction.reply(`✅ Removed role ${role.name} from ${user.tag}`);
     }
@@ -161,7 +178,7 @@ client.on(Events.InteractionCreate, async interaction => {
     if (commandName === 'mute') {
       const user = interaction.options.getUser('target');
       const member = await interaction.guild.members.fetch(user.id).catch(() => null);
-      if (!member) return interaction.reply({ content: '⚠️ User not found.', flags: 64 });
+      if (!member) return interaction.reply({ content: '⚠️ User not found.' });
       await member.timeout(10 * 60 * 1000); // 10 min
       return interaction.reply(`✅ Muted ${user.tag} for 10 minutes`);
     }
@@ -169,7 +186,7 @@ client.on(Events.InteractionCreate, async interaction => {
     if (commandName === 'unmute') {
       const user = interaction.options.getUser('target');
       const member = await interaction.guild.members.fetch(user.id).catch(() => null);
-      if (!member) return interaction.reply({ content: '⚠️ User not found.', flags: 64 });
+      if (!member) return interaction.reply({ content: '⚠️ User not found.' });
       await member.timeout(null);
       return interaction.reply(`✅ Unmuted ${user.tag}`);
     }
@@ -178,7 +195,7 @@ client.on(Events.InteractionCreate, async interaction => {
       const user = interaction.options.getUser('target');
       const channel = interaction.options.getChannel('channel');
       const member = await interaction.guild.members.fetch(user.id).catch(() => null);
-      if (!member || !member.voice.channel) return interaction.reply({ content: '⚠️ User not in a voice channel.', flags: 64 });
+      if (!member || !member.voice.channel) return interaction.reply({ content: '⚠️ User not in a voice channel.' });
       await member.voice.setChannel(channel);
       return interaction.reply(`✅ Moved ${user.tag} to ${channel.name}`);
     }
@@ -192,9 +209,42 @@ client.on(Events.InteractionCreate, async interaction => {
       await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: true });
       return interaction.reply(`🔓 Channel unlocked.`);
     }
+
+    if (commandName === 'help') {
+      const helpEmbed = new EmbedBuilder()
+        .setColor(0x5865F2)
+        .setTitle("🤖 Bot Help Menu")
+        .setDescription("Here are all the available commands you can use:")
+        .addFields(
+          {
+            name: "⚙️ Moderation",
+            value: "/kick @user → Kick a member\n/ban @user → Ban a member\n/mute @user → Mute (10 min)\n/unmute @user → Unmute a member"
+          },
+          {
+            name: "👥 Role Management",
+            value: "/giverole @user @role → Give a role\n/removerole @user @role → Remove a role"
+          },
+          {
+            name: "🎙 Voice",
+            value: "/move @user #channel → Move a user to a voice channel"
+          },
+          {
+            name: "🔒 Channels",
+            value: "/lockchannel → Lock this channel\n/unlockchannel → Unlock this channel"
+          },
+          {
+            name: "💬 Utility",
+            value: "/say text → Bot repeats your text\n/help → Show this help menu"
+          }
+        )
+        .setFooter({ text: "Made by Rick | Author" })
+        .setTimestamp();
+
+      return interaction.reply({ embeds: [helpEmbed] }); // 👈 public embed
+    }
   } catch (err) {
     console.error(err);
-    return interaction.reply({ content: `❌ Error: ${err.message}`, flags: 64 });
+    return interaction.reply({ content: `❌ Error: ${err.message}` });
   }
 });
 

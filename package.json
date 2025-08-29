@@ -1,7 +1,7 @@
 {
   "name": "discord-moderation-bot",
   "version": "1.0.0",
-  "description": "A Discord moderation bot with kick, ban, role management, mute, move, and channel lock/unlock commands.",
+  "description": "A Discord moderation bot with kick, ban, roles, mute, move, and channel lock/unlock commands.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -16,7 +16,8 @@
     "mute",
     "move",
     "lock",
-    "unlock"
+    "unlock",
+    "help"
   ],
   "author": "Rick",
   "license": "MIT",
